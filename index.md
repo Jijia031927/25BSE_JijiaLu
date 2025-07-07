@@ -13,7 +13,7 @@ For my intensive prohject, I chose the RFID Lockbox. This device aims to teach y
 
 <!---**Replace the BlueStamp logo below with an image of yourself and your completed project. Follow the guide [here](https://tomcam.github.io/least-github-pages/adding-images-github-pages-site.html) if you need help.**-->
 
-![Headshot](foto.jpg)
+![Headshot]()
 ![Completed Starter Project-Retro Gaming Console](IMG_2191.DMG)
   
 # Final Milestone
