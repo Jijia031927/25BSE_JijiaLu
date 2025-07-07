@@ -8,11 +8,11 @@ Replace this text with a brief description (2-3 sentences) of your project. This
 
 | **Engineer** | **School** | **Area of Interest** | **Grade** |
 |:--:|:--:|:--:|:--:|
-| FirstName LastInitialOnly | School Name | Electrical Engineering | Incoming Senior
+| Jijia L. | Seven Lakes High School | Enviromental Engineering | Incoming Senior
 
-**Replace the BlueStamp logo below with an image of yourself and your completed project. Follow the guide [here](https://tomcam.github.io/least-github-pages/adding-images-github-pages-site.html) if you need help.**
+<!---**Replace the BlueStamp logo below with an image of yourself and your completed project. Follow the guide [here](https://tomcam.github.io/least-github-pages/adding-images-github-pages-site.html) if you need help.**-->
 
-![Headstone Image](logo.svg)
+![Headstone Image](https://ibb.co/FL5tP3MF)
   
 # Final Milestone
 
