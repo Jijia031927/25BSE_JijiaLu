@@ -1,5 +1,5 @@
 # RFID Lockbox
-For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a couple decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and The Number Game.
+For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and The Number Game.
 For my intensive prohject, I chose the RFID Lockbox. This device aims to teach you how an simple security program functions, while also providing you with something practical.
 
 <!---You should comment out all portions of your portfolio that you have not completed yet, as well as any instructions:-->
