@@ -1,6 +1,6 @@
 # RFID Lockbox
 For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and The Number Game.
-For my intensive prohject, I chose the RFID Lockbox. This device aims to teach you how an simple security program functions, while also providing you with something practical.
+For my intensive project, I chose the RFID Lockbox. This device aims to teach you how an simple security program functions, while also providing you with something practical.
 
 <!---You should comment out all portions of your portfolio that you have not completed yet, as well as any instructions:-->
 <!---HTML-->
@@ -13,15 +13,15 @@ For my intensive prohject, I chose the RFID Lockbox. This device aims to teach y
 
 <!---**Replace the BlueStamp logo below with an image of yourself and your completed project. Follow the guide [here](https://tomcam.github.io/least-github-pages/adding-images-github-pages-site.html) if you need help.**-->
 
-![Headshot](JijiaL.jpg)
+<img src="JijiaL.jpg" alt="Alt Text" style="width:50%; height:auto;">
 
 # Starter Project
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=4jDJQshDIgnvTNb1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-# Explanation
+## Explanation
 
-For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and a Slot Machine. Each game utilizes the inputs from the D-Pad style buttons for diffrent functions, as well as the green and yellow button for confirming and pausing/quitting the game. The music changes depends on what game was played, as well as what was displayed on the 7-segment display. The whole device is powered by 3 AAA batteries, or it could be powered via USB-B connection. There's also some options to adjust the brightness levels and the volume. 
+For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and a Slot Machine. Each game utilizes the inputs from the D-Pad style buttons for diffrent functions, as well as the green and yellow button for confirming and pausing/quitting the game. The music changes depends on what game was played, as well as what was displayed on the 7-segment display. The whole device is powered by 3 AAA batteries, or it could be powered via USB-B connection. There's also some options to adjust the brightness levels and the volume.<br><br>During the process of constructing the console, the biggest challenge for me was to not accidentally solder two joints toghether, as that could create a short between them. But because I've soldered a lot before, this wasn't a huge issue for me, I just slowed down and was more careful, and the soldering turned out great with everything working as it should. But the real issue that prevented me from completing the project easily was the unclear instruction. The phamplet included in my kit are missing some of the crutial steps like where to solder the wires to, which direction each conponent should face, and what types of wiring should you use. In the end, I figured out how each will work toghether and where they would go by looking up info online, and asking my friends for advices.
 
 # How it works
 
@@ -66,117 +66,193 @@ For your second milestone, explain what you've worked on since your previous mil
 
 # Code
 ```c++
-// The required libraries for the program
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Keypad.h>
 #include <SPI.h>
-#include <RFID.h>
+#include <MFRC522.h>
 #include <Servo.h>
 
-// Setup arduino pin definitions 
-#define SS_PIN 10 
-#define RST_PIN 9
-#define SERVO_PIN 3
-#define BUZZER_PIN 8
+// —— Pins ——
+// RFID (unchanged)
+#define SS_PIN       10
+#define RST_PIN       9
+// Servos (unchanged)
+#define LOCK_PIN      3
+#define MOTOR_PIN     6
+// Active buzzer (unchanged)
+#define BUZZER_PIN    8
 
-// Initialise the RFID reader
-RFID rfid(SS_PIN,RST_PIN);
+// I²C LCD at 0x27, size 16×2
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// Initialise an instance of the Servo class called "lock"
-Servo lock;
+// Keypad setup (4×3)
+const byte ROWS = 4, COLS = 3;
+char keys[ROWS][COLS] = {
+  { '1','2','3' },
+  { '4','5','6' },
+  { '7','8','9' },
+  { '*','0','#' }
+};
+byte rowPins[ROWS] = { 2, 4, 5, 7 };   // you can adjust as needed
+byte colPins[COLS] = { A0, A1, A2 };
+Keypad keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-// serNum is used for reading and checking the ID number
-int serNum[5];
+// RFID & servos & buzzer
+MFRC522  rfid(SS_PIN, RST_PIN);
+Servo    lockServo, motorServo;
 
-//This integer should be the code of your RFID card / tag 
-int cards[][5] = {{182,106,89,165,32}};
+// Authorized cards (replace with your own 4-byte UID)
+byte cards[][4] = {
+  { 138, 56, 8, 5 }
+};
 
-bool access = false;
-bool boxOpen = true;
+// Your 2FA passcode
+const String PASSCODE = "1234";
 
-int attemptCount = 0;
-bool alarmOn = false;
+// How long the MG995 holds its position (ms)
+const unsigned long MOTOR_HOLD_MS = 2000;
 
-// Function to read the RFID card / tag and determine whether access should be granted
-void readCard() {
-  if(rfid.readCardSerial()){
-      for(int x = 0; x < sizeof(cards); x++){
-        for(int i = 0; i < sizeof(rfid.serNum); i++ ){
-            if(rfid.serNum[i] != cards[x][i]) {
-                access = false;
-                break;
-            } else {
-                access = true;
-            }
-        }
-        if(access) break;
-      }
-  }
-}
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(9600);
   SPI.begin();
-  rfid.init();  
-  lock.attach(SERVO_PIN);
-  lock.write(5);
+  rfid.PCD_Init();
+
+  // Locking servo
+  lockServo.attach(LOCK_PIN);
+  lockServo.write(5);    // “locked” angle
+
+  // Motor servo
+  motorServo.attach(MOTOR_PIN);
+  motorServo.write(0);   // rest position
+
+  // Active buzzer
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  // LCD
+  lcd.init();
+  lcd.backlight();
+  showScanCard();
 }
+
 void loop() {
-  // put your main code here, to run repeatedly:
-  // The "if" statement only runs if an RFID card / tag is detected
-  if(rfid.isCard()){
-       /*
-        * Check whether the read card serial number matches the saved serial number
-        * If the serial number is incorrect, access = false, otherwise access = true
-       */
-       readCard();
-       /*
-        * If access is set to true and the box is currently locked, the servo will move to                                    
-          unlock the box.
-        * If access is set to true and the box is currently unlocked, the servo will move to
-          lock the box.
-        * If access remains false, a warning buzzer will sound.
-        * Each time an attempt is wrong, a count is increased. Once this count reaches 3, an
-          alarm will sound.
-        * The alarm can only be silenced by using the correct RFID card / tag.
-        */
-       if(access){
-           attemptCount = 0;
-           if (!boxOpen) {
-              lock.write(5);
-              boxOpen = true;
-              delay(1000);
-           } else {
-              lock.write(45);
-              boxOpen = false;
-              delay(1000);
-           }           
-       } else {
-           attemptCount = attemptCount + 1;
-           if (attemptCount < 3) {
-              tone(BUZZER_PIN, 330, 500);
-              delay(250);
-              tone(BUZZER_PIN, 311, 500);
-              delay(250);
-              noTone(BUZZER_PIN);
-           } else {
-              alarmOn = true;
-              while (alarmOn) {
-                tone(BUZZER_PIN, 784, 1000);
-                delay(250);
-                tone(BUZZER_PIN, 659, 1000);
-                delay(250);
-                noTone(BUZZER_PIN);                
-                if (rfid.isCard()) {
-                  readCard(); 
-                }                                
-                if (access) {
-                    attemptCount = 0;
-                    alarmOn = false;
-                }
-              }
-           }
-       }
+  // 1) Wait for a card
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial())      return;
+
+  bool cardOk = checkCard();
+  rfid.PICC_HaltA();
+
+  if (!cardOk) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Card Invalid");
+    beepWrong();
+    delay(1500);
+    showScanCard();
+    return;
   }
-  rfid.halt();
+
+  // 2) Card OK → ask for passcode
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Please Enter");
+  lcd.setCursor(0,1);
+  lcd.print("Passcode");
+
+  bool pinOk = enterPasscode();
+  if (!pinOk) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Wrong Passcode");
+    beepWrong();
+    delay(1500);
+    showScanCard();
+    return;
+  }
+
+  // 3) Both OK → grant access
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Access Granted");
+  beepCorrect();
+
+  // Unlock servo
+  lockServo.write(90);
+  delay(500);
+  // Motor action
+  motorServo.write(45);
+  delay(MOTOR_HOLD_MS);
+  motorServo.write(0);
+  delay(500);
+  // Lock back
+  lockServo.write(5);
+
+  delay(1000);
+  showScanCard();
+}
+
+// — Helper functions —
+
+void showScanCard() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Please Scan");
+  lcd.setCursor(0,1);
+  lcd.print("Your Card");
+}
+
+bool checkCard() {
+  for (size_t x = 0; x < sizeof(cards)/sizeof(cards[0]); x++) {
+    bool match = true;
+    for (byte i = 0; i < 4; i++) {
+      if (rfid.uid.uidByte[i] != cards[x][i]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return true;
+  }
+  return false;
+}
+
+bool enterPasscode() {
+  String input = "";
+  lcd.setCursor(0,1);
+  while (true) {
+    char k = keypad.getKey();
+    if (!k) continue;
+    if (k >= '0' && k <= '9' && input.length() < PASSCODE.length()) {
+      input += k;
+      lcd.print('*');
+    }
+    else if (k == '#') {
+      return (input == PASSCODE);
+    }
+    else if (k == '*') {
+      // clear entry
+      input = "";
+      lcd.setCursor(0,1);
+      lcd.print("                ");
+      lcd.setCursor(0,1);
+    }
+  }
+}
+
+void beepCorrect() {
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(300);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+void beepWrong() {
+  for (int i = 0; i < 2; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(100);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(100);
+  }
 }
 ```
 
