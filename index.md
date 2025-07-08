@@ -19,7 +19,7 @@ For my intensive prohject, I chose the RFID Lockbox. This device aims to teach y
 
 **Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/F7M7imOVGug" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
 
 For your final milestone, explain the outcome of your project. Key details to include are:
 - What you've accomplished since your previous milestone
@@ -45,13 +45,25 @@ For your second milestone, explain what you've worked on since your previous mil
 
 **Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=_gDeEHRaXEO5Gs6H" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 
 For your first milestone, describe what your project is and how you plan to build it. You can include:
 - An explanation about the different components of your project and how they will all integrate together
 - Technical progress you've made so far
 - Challenges you're facing and solving in your future milestones
 - What your plan is to complete your project
+
+# Starter Project
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=4jDJQshDIgnvTNb1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+# Explanation
+
+For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and a Slot Machine. Each game utilizes the inputs from the D-Pad style buttons for diffrent functions, as well as the green and yellow button for confirming and pausing/quitting the game. The music changes depends on what game was played, as well as what was displayed on the 7-segment display. The whole device is powered by 3 AAA batteries, or it could be powered via USB-B connection. There's also some options to adjust the brightness levels and the volume. 
+
+# How it works
+
+I used a LED Matrix x2, 7 Segment Display, Buzzer, Button x7, Capacitor, Battery holder, AAA Battery x3, Transparent Acrylic Shell x 4, Integrated Circuit/Microprocessor, and PCB. The microprocessor processes the inputs from the 7 buttons/switches and outputs to the screen and 7-segment display.
 
 # Schematics 
 Here's where you'll put images of your schematics. [Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/) are both great resoruces to create professional schematic diagrams, though BSE recommends Tinkercad becuase it can be done easily and for free in the browser. 
@@ -60,15 +72,117 @@ Here's where you'll put images of your schematics. [Tinkercad](https://www.tinke
 Here's where you'll put your code. The syntax below places it into a block of code. Follow the guide [here]([url](https://www.markdownguide.org/extended-syntax/)) to learn how to customize it to your project needs. 
 
 ```c++
+// The required libraries for the program
+#include <SPI.h>
+#include <RFID.h>
+#include <Servo.h>
+
+// Setup arduino pin definitions 
+#define SS_PIN 10 
+#define RST_PIN 9
+#define SERVO_PIN 3
+#define BUZZER_PIN 8
+
+// Initialise the RFID reader
+RFID rfid(SS_PIN,RST_PIN);
+
+// Initialise an instance of the Servo class called "lock"
+Servo lock;
+
+// serNum is used for reading and checking the ID number
+int serNum[5];
+
+//This integer should be the code of your RFID card / tag 
+int cards[][5] = {{182,106,89,165,32}};
+
+bool access = false;
+bool boxOpen = true;
+
+int attemptCount = 0;
+bool alarmOn = false;
+
+// Function to read the RFID card / tag and determine whether access should be granted
+void readCard() {
+  if(rfid.readCardSerial()){
+      for(int x = 0; x < sizeof(cards); x++){
+        for(int i = 0; i < sizeof(rfid.serNum); i++ ){
+            if(rfid.serNum[i] != cards[x][i]) {
+                access = false;
+                break;
+            } else {
+                access = true;
+            }
+        }
+        if(access) break;
+      }
+  }
+}
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-  Serial.println("Hello World!");
+  SPI.begin();
+  rfid.init();  
+  lock.attach(SERVO_PIN);
+  lock.write(5);
 }
-
 void loop() {
   // put your main code here, to run repeatedly:
-
+  // The "if" statement only runs if an RFID card / tag is detected
+  if(rfid.isCard()){
+       /*
+        * Check whether the read card serial number matches the saved serial number
+        * If the serial number is incorrect, access = false, otherwise access = true
+       */
+       readCard();
+       /*
+        * If access is set to true and the box is currently locked, the servo will move to                                    
+          unlock the box.
+        * If access is set to true and the box is currently unlocked, the servo will move to
+          lock the box.
+        * If access remains false, a warning buzzer will sound.
+        * Each time an attempt is wrong, a count is increased. Once this count reaches 3, an
+          alarm will sound.
+        * The alarm can only be silenced by using the correct RFID card / tag.
+        */
+       if(access){
+           attemptCount = 0;
+           if (!boxOpen) {
+              lock.write(5);
+              boxOpen = true;
+              delay(1000);
+           } else {
+              lock.write(45);
+              boxOpen = false;
+              delay(1000);
+           }           
+       } else {
+           attemptCount = attemptCount + 1;
+           if (attemptCount < 3) {
+              tone(BUZZER_PIN, 330, 500);
+              delay(250);
+              tone(BUZZER_PIN, 311, 500);
+              delay(250);
+              noTone(BUZZER_PIN);
+           } else {
+              alarmOn = true;
+              while (alarmOn) {
+                tone(BUZZER_PIN, 784, 1000);
+                delay(250);
+                tone(BUZZER_PIN, 659, 1000);
+                delay(250);
+                noTone(BUZZER_PIN);                
+                if (rfid.isCard()) {
+                  readCard(); 
+                }                                
+                if (access) {
+                    attemptCount = 0;
+                    alarmOn = false;
+                }
+              }
+           }
+       }
+  }
+  rfid.halt();
 }
 ```
 
@@ -88,4 +202,3 @@ One of the best parts about Github is that you can view how other people set up 
 - [Example 2](https://sviatil0.github.io/Sviatoslav_BSE/)
 - [Example 3](https://arneshkumar.github.io/arneshbluestamp/)
 
-To watch the BSE tutorial on how to create a portfolio, click here.
