@@ -27,6 +27,15 @@ For my starter project, I chose the Retro Gaming Console. This device recreates 
 I used a LED Matrix x2, 7 Segment Display, Buzzer, Button x7, Capacitor, Battery holder, AAA Battery x3, Transparent Acrylic Shell x 6, ICM (Intergrated Circuit Processor), and PCB. The ICM processes the inputs from the 7 buttons/switches and outputs to the screen and 7-segment display.
 
 # First Milestone
+For my first milestone, I completed the construction and wiring of the core components that make up the locking function of the project. I mounted an Arduino UNO R3 (with its servo‐driver extension shield) in its enclosure and soldered the header for the MG995 servo onto the board. I then ran a dedicated 5 V supply line—complete with a 470 μF decoupling capacitor—to the servo’s red and brown leads, and connected its control wire to digital pin 6. With this hardware in place, I was able to upload a simple sweep sketch that reliably moves the servo arm between its horizontal “rest” position and the 90° CCW “active” position needed to retract the lock.
+
+On the software side, I have verified that the MG995 will consistently hit both its start-and-end angles when powered from both USB and battery sources. To eliminate voltage sag during motion, I tested the system on a USB power bank and observed stable performance once the capacitor was in place. I also established a common ground between the Arduino and the external supply, ensuring the servo and controller share a reference. These early tests give me confidence that the locking mechanism will operate smoothly under standalone battery power.
+
+Looking ahead, the primary challenges will be integrating the MFRC522 RFID reader and implementing the two-card authentication logic without mechanical interference. I will need to calibrate the servo angles in situ—tweaking the MOTOR_REST_ANGLE and MOTOR_ACTIVE_ANGLE constants in code—so that the lock cam aligns precisely with its strike plate. I also need to design a tidy mounting scheme for the RFID antenna inside the enclosure and route all wiring so that nothing catches when the servo moves. Finally, I’ll test reliability over hundreds of cycles to guard against wear or binding.
+
+For upcoming milestones, I plan to wire and code the RFID module, reading two distinct tags in sequence and gating the servo action on successful scans. Once the reader is in place, I will add the I²C-backed LCD1602 to give user prompts (“Please Scan Card #1,” “Card 2 Invalid,” etc.), an active buzzer for audible feedback, and red/green status LEDs. After assembling and debugging that full authentication flow, I’ll move on to designing a custom 3D-printed housing, writing comprehensive documentation, and producing a demonstration video that showcases the finished system in action.
+
+## First Milestone Video
 
 <!---**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.*-->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/M0pmq5avC0Q?si=Eaqc1bn8x1eadtzN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -36,17 +45,10 @@ I used a LED Matrix x2, 7 Segment Display, Buzzer, Button x7, Capacitor, Battery
 - Technical progress you've made so far
 - Challenges you're facing and solving in your future milestones
 - What your plan is to complete your project-->
-For my first milestone, I completed the construction and wiring of the core components that make up the locking function of the project. I mounted an Arduino UNO R3 (with its servo‐driver extension shield) in its enclosure and soldered the header for the MG995 servo onto the board. I then ran a dedicated 5 V supply line—complete with a 470 μF decoupling capacitor—to the servo’s red and brown leads, and connected its control wire to digital pin 6. With this hardware in place, I was able to upload a simple sweep sketch that reliably moves the servo arm between its horizontal “rest” position and the 90° CCW “active” position needed to retract the lock.
 
-On the software side, I have verified that the MG995 will consistently hit both its start-and-end angles when powered from both USB and battery sources. To eliminate voltage sag during motion, I tested the system on a USB power bank and observed stable performance once the capacitor was in place. I also established a common ground between the Arduino and the external supply, ensuring the servo and controller share a reference. These early tests give me confidence that the locking mechanism will operate smoothly under standalone battery power.
-
-Looking ahead, the primary challenges will be integrating the MFRC522 RFID reader and implementing the two-card authentication logic without mechanical interference. I will need to calibrate the servo angles in situ—tweaking the MOTOR_REST_ANGLE and MOTOR_ACTIVE_ANGLE constants in code—so that the lock cam aligns precisely with its strike plate. I also need to design a tidy mounting scheme for the RFID antenna inside the enclosure and route all wiring so that nothing catches when the servo moves. Finally, I’ll test reliability over hundreds of cycles to guard against wear or binding.
-
-For upcoming milestones, I plan to wire and code the RFID module, reading two distinct tags in sequence and gating the servo action on successful scans. Once the reader is in place, I will add the I²C-backed LCD1602 to give user prompts (“Please Scan Card #1,” “Card 2 Invalid,” etc.), an active buzzer for audible feedback, and red/green status LEDs. After assembling and debugging that full authentication flow, I’ll move on to designing a custom 3D-printed housing, writing comprehensive documentation, and producing a demonstration video that showcases the finished system in action.
 # Second Milestone
 
 <!---**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**-->
-<iframe width="560" height="315" src="https://www.youtube.com/embed/fDCb2J9xpOk?si=-7EMGv_uoDvhrFOk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 <!---For your second milestone, explain what you've worked on since your previous milestone. You can highlight:
 - Technical details of what you've accomplished and how they contribute to the final goal
@@ -60,6 +62,10 @@ On top of that, I encapsulated all user messaging in a single showMessage() rout
 One surprise came from handling the reader’s “card still present” state: without the removal loop, the reader would stubbornly keep detecting the same first card and never advance to the second step. Resolving that took careful testing of PICC_IsNewCardPresent() and small delays to avoid rapid re-triggers. I also wrestled with library quirks—like needing to call PCD_Init() and PICC_HaltA() in just the right places to prevent lock-ups—and ironed out several off-by-one bugs in the UID comparison loops.
 
 For the final milestone, I still need to polish the code by refactoring common patterns into reusable functions (for example, abstracting the dual-card flow into a single state machine), implement non-blocking timing with millis() so the loop remains responsive, and add configurable storage (perhaps EEPROM) for the authorized UIDs. I’ll also build in better error handling for edge cases—such as power-on resets with a card already in the field—and prepare full documentation of the code flow so the system can be maintained and extended easily.
+
+## Second Milestone Video
+<iframe width="560" height="315" src="https://www.youtube.com/embed/fDCb2J9xpOk?si=-7EMGv_uoDvhrFOk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 # Final Milestone
 
 <!---**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**-->
