@@ -65,7 +65,20 @@ For the final milestone, my next step is purely mechanical integration: I’ll b
 <iframe width="560" height="315" src="https://www.youtube.com/embed/fDCb2J9xpOk?si=-7EMGv_uoDvhrFOk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 # Final Milestone
+In the weeks since Milestone 2, I’ve fully brought together hardware, firmware, and enclosure into a polished, functioning prototype. The two-card RFID logic now runs flawlessly: after scanning each authorized UID in sequence, the latch servo unlocks and the MG995 motor snaps the tray open; the system stays unlocked until a simple push-button returns the motor to its rest position and re-locks the latch. All user-feedback elements—LCD prompts, green/red LEDs, and buzzer tones—work in concert to guide someone through each step without confusion.
 
+My biggest challenge at BSE was wrestling with the RFID reader’s state machine: preventing it from “sticking” on the first tag and learning to reinitialize it correctly after card removal. Overcoming that quagmire felt like a real triumph, and it taught me the value of methodical, blocking-vs-nonblocking I/O patterns in embedded code. Another highlight was designing and fitting all components into a single enclosure—measuring, bracket-prototyping in CAD, and iterating until every module had its perfect home without wires catching or servos binding.
+
+Through this project I’ve deepened my understanding of:<br><br>
+	•	RFID communication (MFRC522 library quirks, UID parsing, reader resets)<br><br>
+	•	I²C peripherals (LCD backpack setup, contrast tuning, address scanning)<br><br>
+	•	Servo control (precise angle mapping, power-bank decoupling, timing with millis() vs. delay())<br><br>
+	•	Stateful UI design (LCD prompts, LED/buzzer feedback, push-button state machines)<br><br>
+
+Looking ahead, I’m excited to explore more advanced topics in embedded systems—secure over-the-air firmware updates, wireless keycards (BLE/NFC), low-power optimization, and encrypted authentication. The foundation I’ve built at BSE gives me confidence to tackle networked IoT devices and professional-grade access controllers in the future.
+
+## Final Milestone Video
+<iframe width="560" height="315" src="https://www.youtube.com/embed/3zZ4RvGA0gg?si=Tn82DTR2EeVxfAKj" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 <!---**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.**-->
 
 <!---For your final milestone, explain the outcome of your project. Key details to include are:
