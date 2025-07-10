@@ -100,7 +100,7 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 
 // —— Pins ——
 #define SS_PIN           10   // RFID SS
-#define RST_PIN           9   // RFID RST
+#define RST_PIN           9   // RFID RST (wired to Arduino D9)
 #define LOCK_PIN          3   // latch‐servo
 #define MOTOR_PIN         6   // MG995 motor‐servo
 #define BUZZER_PIN        8   // active buzzer
@@ -117,14 +117,17 @@ const unsigned long MOTOR_HOLD_MS  = 2000;
 // —— I²C LCD ——
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// —— RFID & servos ——
+// —— RFID reader & servos ——
 MFRC522 rfid(SS_PIN, RST_PIN);
 Servo    lockServo, motorServo;
 
 // —— Authorized UIDs ——
-byte cards[][4] = {
-  {138,63,230,63},    // Card #1   
-  {160,170,22,8} 
+byte cards[][5] = {
+  {138,  63,   230,   63},
+  {160, 170,  22,   8},
+  {165, 63,   230,  63},
+  {189 ,87,  203,  145},
+  {138,56,8,5}
 };
 
 bool unlocked = false;
@@ -134,6 +137,14 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
   SPI.begin();
+
+  // force-reset the MFRC522 on every power-up
+  pinMode(RST_PIN, OUTPUT);
+  digitalWrite(RST_PIN, LOW);
+  delay(50);
+  digitalWrite(RST_PIN, HIGH);
+  delay(50);
+  // then initialize
   rfid.PCD_Init();
 
   lockServo.attach(LOCK_PIN);
@@ -162,18 +173,16 @@ void loop() {
   // — Manual re‐lock block —
   if (unlocked) {
     if (!unlockMsgShown) {
-      showMessage("Press Button", "To Lock");
+      showMessage("Press Button","To Lock");
       unlockMsgShown = true;
     }
     if (digitalRead(BUTTON_PIN) == LOW) {
       delay(50);
       while (digitalRead(BUTTON_PIN) == LOW) delay(10);
 
-      // Show locking message longer
-      showMessage("Locking","Please Wait");
-      delay(1000);                       // ← hold the message for 1 second
-
       // Return motor to rest position
+      showMessage("Locking","Please Wait");
+      delay(1000);
       motorServo.write(MOTOR_REST_ANGLE);
       tone(BUZZER_PIN, 1000, 100);
 
@@ -194,6 +203,7 @@ void loop() {
   // — Card #1 —
   showMessage("Please Scan", "Card #1");
   readCardBlocking(uid1);
+  exportUID(uid1, 4);
   if (!isAuthorized(uid1)) {
     indicateWrong();
     deny("Card 1 Invalid");
@@ -210,6 +220,7 @@ void loop() {
   while (true) {
     showMessage("Please Scan", "Card #2");
     readCardBlocking(uid2);
+    exportUID(uid2, 4);
     if (!isAuthorized(uid2)) {
       indicateWrong();
       deny("Card 2 Invalid");
@@ -227,7 +238,7 @@ void loop() {
   }
 
   // — Grant access & enter manual‐relock mode —
-  showMessage("Access", "Granted");
+  showMessage("Access Granted", "");
   tone(BUZZER_PIN, 1000, 300);
   delay(300);
 
@@ -235,7 +246,7 @@ void loop() {
   lockServo.write(90);
   delay(500);
 
-  // Run motor to active, but do NOT return to rest here
+  // Run motor to active angle and stay
   motorServo.write(MOTOR_ACTIVE_ANGLE);
   delay(MOTOR_HOLD_MS);
 
@@ -255,7 +266,7 @@ void readCardBlocking(byte buf[4]) {
 void waitForRemoval() {
   while (rfid.PICC_IsNewCardPresent()) delay(50);
   delay(200);
-  rfid.PCD_Init();
+  rfid.PCD_Init();  // re-init reader
 }
 
 bool isAuthorized(byte uid[4]) {
@@ -290,16 +301,15 @@ void deny(const char* msg) {
   }
   delay(800);
 }
+
 // — UID Export Function —  
 void exportUID(byte uid[], byte len) {
-  // Decimal format
   Serial.print("UID DEC: ");
   for (byte i = 0; i < len; i++) {
     Serial.print(uid[i], DEC);
     if (i < len - 1) Serial.print(',');
   }
   Serial.println();
-  // Hex format
   Serial.print("UID HEX: ");
   for (byte i = 0; i < len; i++) {
     if (uid[i] < 0x10) Serial.print('0');
