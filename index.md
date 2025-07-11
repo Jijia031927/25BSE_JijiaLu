@@ -89,7 +89,8 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
-![Wiring Diagram]()
+<img src="Screenshot 2025-07-11 at 15.05.18.png" alt="Alt Text" style="width:75%; height:auto;">
+
 # Code
 ```c++
 /* —— Authorized UIDs ——
