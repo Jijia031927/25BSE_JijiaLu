@@ -354,7 +354,7 @@ Don't forget to place the link of where to buy each component inside the quotati
 | ELEGOO UNO R3 Project Super Starter Kit| The core conponents for the project | $35.99 | <a href="https://a.co/d/9hBT6cX"> Link </a> |
 | SunFounder Reader Module Kit Mifare RC522 Reader Module | An Arduino-compataibile RFID module | $8.99 | <a href="https://a.co/d/eX8J4wL"> Link </a> |
 | YAMASO 20PCS L Bracket Corner Bracket with 60PCS Screws | Creating the structure and fastening the pieces toghether | $5.99 | <a href="https://a.co/d/65ODQW2"> Link </a> |
-| Wooden Box | Container | $8.49 | <a href="https://a.co/d/elA4GaO"> Link </a> |
+| Wooden Box | Container | $21.99 | <a href="https://a.co/d/elA4GaO"> Link </a> |
 | 5 AA Battery Holder with Wires | Provides power for the system | $7.99 | <a href="https://a.co/d/0rVpuwI"> Link </a> |
 | 4*4 Keypad | A form of authentication | $10.99 | <a href="https://www.adafruit.com/search?q=keypad&p=1"> Link </a> |
 # Other Resources/Examples
