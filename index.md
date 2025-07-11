@@ -89,7 +89,7 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
-![Wiring Diagram](https://raw.githubusercontent.com/youruser/arduino-lock-wiring/main/wiring.png)
+![Wiring Diagram]()
 # Code
 ```c++
 /* —— Authorized UIDs ——
