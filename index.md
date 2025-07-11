@@ -86,6 +86,7 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 - What your biggest challenges and triumphs were at BSE
 - A summary of key topics you learned about
 - What you hope to learn in the future after everything you've learned at BSE-->
+# Modifications
 
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
