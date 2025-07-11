@@ -93,7 +93,7 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 
 # Code
 ```c++
-/* —— Authorized UIDs ——
+/* —— Authorized UIDs —— Just a copy of all the authorized cards, so I don't have to re-type it everytime
 byte cards[][10] = {
   {138,  63,   230,   63},
   {160, 170,  22,   8},
