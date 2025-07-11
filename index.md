@@ -354,11 +354,12 @@ Don't forget to place the link of where to buy each component inside the quotati
 | ELEGOO UNO R3 Project Super Starter Kit| The core conponents for the project | $35.99 | <a href="https://a.co/d/9hBT6cX"> Link </a> |
 | SunFounder Reader Module Kit Mifare RC522 Reader Module | An Arduino-compataibile RFID module | $8.99 | <a href="https://a.co/d/eX8J4wL"> Link </a> |
 | YAMASO 20PCS L Bracket Corner Bracket with 60PCS Screws | Creating the structure and fastening the pieces toghether | $5.99 | <a href="https://a.co/d/65ODQW2"> Link </a> |
-| MMOBIEL Micro Servo Motor Kit MG995 55g 90° | Locking mechanism for the project | $8.49 | <a href="https://a.co/d/dIDshdN"> Link </a> |
+| Wooden Box | Container | $8.49 | <a href="https://a.co/d/elA4GaO"> Link </a> |
 | 5 AA Battery Holder with Wires | Provides power for the system | $7.99 | <a href="https://a.co/d/0rVpuwI"> Link </a> |
 | 4*4 Keypad | A form of authentication | $10.99 | <a href="https://www.adafruit.com/search?q=keypad&p=1"> Link </a> |
 # Other Resources/Examples
-One of the best parts about Github is that you can view how other people set up their own work. Here are some past BSE portfolios that are awesome examples. You can view how they set up their portfolio, and you can view their index.md files to understand how they implemented different portfolio components.
+Here's some links to the resources that helped me construct this project.
 - [RFID Module Help](https://www.digikey.com/en/maker/projects/how-to-make-an-arduino-based-rfid-box-lock/a57d9f8ad28043d1b56acbd34d8a55de)
 - [Similar Concept-Biometric + Keypad Lockbox](https://sviatil0.github.io/Sviatoslav_BSE/](https://gracewanggg.github.io/Grace_BSE_Portfolio/))
 - [ChatGPT](https://chatgpt.com/share/687182d3-db38-8002-b1a7-1da8e7cc0692)
+- [Wiring the RFID To The Arduino](https://www.instructables.com/Arduino-MFRC522-RFID-READER/)
