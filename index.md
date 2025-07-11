@@ -89,9 +89,20 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
-
+![Wiring Diagram](https://raw.githubusercontent.com/youruser/arduino-lock-wiring/main/wiring.png)
 # Code
 ```c++
+/* —— Authorized UIDs ——
+byte cards[][10] = {
+  {138,  63,   230,   63},
+  {160, 170,  22,   8},
+  {165, 63,   230,  63},
+  {189 ,87,  203,  145},
+  {138,56,8,5},
+  {167,63,230,63}
+};*/
+
+
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
@@ -100,34 +111,37 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 
 // —— Pins ——
 #define SS_PIN           10   // RFID SS
-#define RST_PIN           9   // RFID RST (wired to Arduino D9)
-#define LOCK_PIN          3   // latch‐servo
-#define MOTOR_PIN         6   // MG995 motor‐servo
-#define BUZZER_PIN        8   // active buzzer
-#define LED_RED_PIN       7   // error LED
-#define LED_GREEN1_PIN    2   // card1 OK
-#define LED_GREEN2_PIN    4   // card2 OK
-#define BUTTON_PIN        5   // one leg → D5, other → GND
+#define RST_PIN           9    // RFID RST (wired to Arduino D9)
+#define LOCK_PIN          3    // latch‐servo
+#define MG995_PIN         6    // MG995 motor‐servo
+#define SG90_PIN          A1   // SG90 motor‐servo
+#define BUZZER_PIN        8    // active buzzer
+#define LED_RED_PIN       7    // error LED
+#define LED_GREEN1_PIN    2    // card1 OK
+#define LED_GREEN2_PIN    4    // card2 OK
+#define BUTTON_PIN        5    // one leg → D5, other → GND
 
 // —— Servo angles & timing ——
-const uint8_t   MOTOR_REST_ANGLE   = 90;
-const uint8_t   MOTOR_ACTIVE_ANGLE = 180;
-const unsigned long MOTOR_HOLD_MS  = 2000;
+const uint8_t   MOTOR_REST_ANGLE    = 90;
+const uint8_t   MOTOR_ACTIVE_ANGLE  = 180;
+const uint8_t   SG90_ACTIVE_ANGLE   = 0;    // inverted direction for SG90
+const unsigned long MOTOR_HOLD_MS   = 2000;
 
 // —— I²C LCD ——
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // —— RFID reader & servos ——
 MFRC522 rfid(SS_PIN, RST_PIN);
-Servo    lockServo, motorServo;
+Servo    lockServo, motorMG995, motorSG90;
 
 // —— Authorized UIDs ——
-byte cards[][5] = {
+byte cards[][10] = {
   {138,  63,   230,   63},
   {160, 170,  22,   8},
   {165, 63,   230,  63},
   {189 ,87,  203,  145},
-  {138,56,8,5}
+  {138,56,8,5},
+  {167,63,230,63}
 };
 
 bool unlocked = false;
@@ -138,20 +152,25 @@ void setup() {
   Wire.begin();
   SPI.begin();
 
-  // force-reset the MFRC522 on every power-up
+  // force‐reset MFRC522
   pinMode(RST_PIN, OUTPUT);
   digitalWrite(RST_PIN, LOW);
   delay(50);
   digitalWrite(RST_PIN, HIGH);
   delay(50);
-  // then initialize
   rfid.PCD_Init();
 
+  // latch‐servo
   lockServo.attach(LOCK_PIN);
-  lockServo.write(5);                   // locked start
+  lockServo.write(5);  // locked start
 
-  motorServo.attach(MOTOR_PIN);
-  motorServo.write(MOTOR_REST_ANGLE);   // motor at rest
+  // MG995 servo
+  motorMG995.attach(MG995_PIN);
+  motorMG995.write(MOTOR_REST_ANGLE);
+
+  // SG90 servo (inverted)
+  motorSG90.attach(SG90_PIN);
+  motorSG90.write(MOTOR_REST_ANGLE);
 
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(LED_RED_PIN,    OUTPUT);
@@ -173,17 +192,18 @@ void loop() {
   // — Manual re‐lock block —
   if (unlocked) {
     if (!unlockMsgShown) {
-      showMessage("Press Button","To Lock");
+      showMessage("Press Button", "to Lock");
       unlockMsgShown = true;
     }
     if (digitalRead(BUTTON_PIN) == LOW) {
       delay(50);
       while (digitalRead(BUTTON_PIN) == LOW) delay(10);
 
-      // Return motor to rest position
-      showMessage("Locking","Please Wait");
+      // Return both servos to rest
+      showMessage("Locking", "Please Wait");
       delay(1000);
-      motorServo.write(MOTOR_REST_ANGLE);
+      motorMG995.write(MOTOR_REST_ANGLE);
+      motorSG90.write(MOTOR_REST_ANGLE);
       tone(BUZZER_PIN, 1000, 100);
 
       // Reset LEDs & state
@@ -246,8 +266,9 @@ void loop() {
   lockServo.write(90);
   delay(500);
 
-  // Run motor to active angle and stay
-  motorServo.write(MOTOR_ACTIVE_ANGLE);
+  // Move MG995 and SG90 (inverted)
+  motorMG995.write(MOTOR_ACTIVE_ANGLE);
+  motorSG90.write(SG90_ACTIVE_ANGLE);
   delay(MOTOR_HOLD_MS);
 
   unlocked = true;
@@ -266,13 +287,12 @@ void readCardBlocking(byte buf[4]) {
 void waitForRemoval() {
   while (rfid.PICC_IsNewCardPresent()) delay(50);
   delay(200);
-  rfid.PCD_Init();  // re-init reader
+  rfid.PCD_Init();
 }
 
 bool isAuthorized(byte uid[4]) {
-  for (size_t i = 0; i < sizeof(cards)/sizeof(cards[0]); i++) {
+  for (size_t i = 0; i < sizeof(cards)/sizeof(cards[0]); i++)
     if (memcmp(cards[i], uid, 4) == 0) return true;
-  }
   return false;
 }
 
@@ -293,16 +313,20 @@ void indicateWrong() {
 
 void deny(const char* msg) {
   showMessage(msg, "");
+  // two short beeps
   for (int i = 0; i < 2; i++) {
     digitalWrite(BUZZER_PIN, HIGH);
     delay(100);
     digitalWrite(BUZZER_PIN, LOW);
     delay(100);
   }
+  // brief pause before red LED timeout
   delay(800);
+  // keep red LED on for 3 seconds total
+  delay(3000);
+  digitalWrite(LED_RED_PIN, LOW);
 }
 
-// — UID Export Function —  
 void exportUID(byte uid[], byte len) {
   Serial.print("UID DEC: ");
   for (byte i = 0; i < len; i++) {
@@ -335,5 +359,5 @@ Don't forget to place the link of where to buy each component inside the quotati
 # Other Resources/Examples
 One of the best parts about Github is that you can view how other people set up their own work. Here are some past BSE portfolios that are awesome examples. You can view how they set up their portfolio, and you can view their index.md files to understand how they implemented different portfolio components.
 - [RFID Module Help](https://www.digikey.com/en/maker/projects/how-to-make-an-arduino-based-rfid-box-lock/a57d9f8ad28043d1b56acbd34d8a55de)
-- [Similar Concept-Biometric + Keypad Lockbox]([https://sviatil0.github.io/Sviatoslav_BSE/](https://gracewanggg.github.io/Grace_BSE_Portfolio/))
-- [Example 3](https://arneshkumar.github.io/arneshbluestamp/)
+- [Similar Concept-Biometric + Keypad Lockbox](https://sviatil0.github.io/Sviatoslav_BSE/](https://gracewanggg.github.io/Grace_BSE_Portfolio/))
+- [ChatGPT](https://chatgpt.com/share/687182d3-db38-8002-b1a7-1da8e7cc0692)
