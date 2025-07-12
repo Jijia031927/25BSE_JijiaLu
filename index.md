@@ -88,14 +88,14 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 - What you hope to learn in the future after everything you've learned at BSE-->
 
 # Modifications
-With the addition of the 4×4 keypad and flexible UID matching, this prototype now offers true two‐factor security—each unlock requires two valid RFID cards plus a user-entered PIN. Under the hood, we:
-	•	Wired the keypad’s 4 row and 4 column lines into spare analog pins, debounced keypresses, and echo “*” characters to the I²C LCD.
-	•	Extended the state machine so that only after two successful card reads (with up to ±1 byte tolerance on each UID to handle noisy reads) does the display prompt “Enter Passcode,” then validates the entered code.
-	•	Inserted 50 ms SPI pauses and briefly disabled interrupts around PCD_ReadCardSerial() to prevent collisions between the RFID reader and keypad scanning.
-	•	Polished the user flow with clear LCD menus, audible chimes on correct/incorrect input, and a manual “lock” button to reset both servos and LEDs.
+With the addition of the 4×4 keypad, flexible UID matching, and dual-servo actuation on two separate locking cams, this prototype now delivers full two-factor security and redundant mechanical control. Under the hood, I:<br><br>
+	•	Wired and debounced a 4×4 matrix keypad into spare analog pins, echoing “*” on the I²C LCD and gating access only after two valid card scans.<br><br>
+	•	Relaxed the RFID UID comparison to allow ±1-byte variance for reliable reads in noisy conditions.<br><br>
+	•	Added a secondary SG90 servo alongside the MG995—each driving its own lock cam—so that “Access Granted” moves both latches in unison, and the manual lock button returns both to rest.<br><br>
+	•	Inserted 50 ms SPI pauses and briefly disabled interrupts during RFID reads to prevent collisions with keypad scanning.<br><br>
+	•	Enhanced user feedback with clear LCD menus, distinct correct/incorrect chimes (G3→C4 vs. G3→C3), red/green LEDs, and a manual re-lock button.<br><br>
 
-At this point the system is robust, repeatable, and contained in its final enclosure. All core functionality—RFID reading, keypad entry, dual-servo actuation, and user feedback—has been thoroughly tested. From here, it’s ready for real-world deployment or further feature work like an on-device card/PIN management menu and low-power optimizations.
-
+At this point, the system is fully enclosed, thoroughly tested, and ready for real-world deployment or future feature expansions like an on-device card/PIN management interface and power-saving modes.
 ## Modifications Video
 
 # Schematics 
