@@ -86,7 +86,17 @@ Looking ahead, I’m excited to explore more advanced topics in embedded systems
 - What your biggest challenges and triumphs were at BSE
 - A summary of key topics you learned about
 - What you hope to learn in the future after everything you've learned at BSE-->
+
 # Modifications
+With the addition of the 4×4 keypad and flexible UID matching, this prototype now offers true two‐factor security—each unlock requires two valid RFID cards plus a user-entered PIN. Under the hood, we:
+	•	Wired the keypad’s 4 row and 4 column lines into spare analog pins, debounced keypresses, and echo “*” characters to the I²C LCD.
+	•	Extended the state machine so that only after two successful card reads (with up to ±1 byte tolerance on each UID to handle noisy reads) does the display prompt “Enter Passcode,” then validates the entered code.
+	•	Inserted 50 ms SPI pauses and briefly disabled interrupts around PCD_ReadCardSerial() to prevent collisions between the RFID reader and keypad scanning.
+	•	Polished the user flow with clear LCD menus, audible chimes on correct/incorrect input, and a manual “lock” button to reset both servos and LEDs.
+
+At this point the system is robust, repeatable, and contained in its final enclosure. All core functionality—RFID reading, keypad entry, dual-servo actuation, and user feedback—has been thoroughly tested. From here, it’s ready for real-world deployment or further feature work like an on-device card/PIN management menu and low-power optimizations.
+
+## Modifications Video
 
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
