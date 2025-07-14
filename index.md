@@ -1,39 +1,38 @@
 # RFID Lockbox
 My intensive project is an Arduino-based, two-card RFID access controller that only unlocks when you present two distinct, authorized keycards in sequence. A MG995 servo motor physically retracts the lock cam by 90° CCW, then returns to its horizontal “rest” position. A 16×2 I²C LCD guides the user through each step (“Scan Card #1,” “Card 2 Invalid,” “Access Granted”), while an red/green LEDs deliver visual feedback for success or failure. All electronics—the MFRC522 reader, servo, display, and LEDs—share a common 5 V supply and ground, making the system reliable both on USB power and standalone battery.
 
-<!---You should comment out all portions of your portfolio that you have not completed yet, as well as any instructions:-->
-<!---HTML-->
-<!--- This is an HTML comment in Markdown -->
-<!--- Anything between these symbols will not render on the published site -->
-
 | **Engineer** | **School** | **Area of Interest** | **Grade** |
 |:--:|:--:|:--:|:--:|
 | Jijia L. | Seven Lakes High School | Enviromental Engineering | Incoming Senior
 
-<!---**Replace the BlueStamp logo below with an image of yourself and your completed project. Follow the guide [here](https://tomcam.github.io/least-github-pages/adding-images-github-pages-site.html) if you need help.**-->
-
 <img src="JijiaL.jpg" alt="Alt Text" style="width:50%; height:auto;">
 
 # Modifications
+
+<!--Video here-->
+## Summary
 With the addition of the 4×4 keypad, flexible UID matching, and dual-servo actuation on two separate locking cams, this prototype now delivers full two-factor security and redundant mechanical control. Under the hood, I wired and debounced a 4×4 matrix keypad into spare analog pins, echoing on the I²C LCD and gating access only after two valid card scans; Relaxed the RFID UID comparison to allow ±1-byte variance for reliable reads in noisy conditions; Added a secondary SG90 servo alongside the MG995—each driving its own lock cam—so that “Access Granted” moves both latches in unison, and the manual lock button returns both to rest; Inserted 50 ms SPI pauses and briefly disabled interrupts during RFID reads to prevent collisions with keypad scanning; Enhanced user feedback with clear LCD menus, distinct correct/incorrect chimes (G3→C4 vs. G3→C3), red/green LEDs, and a manual re-lock button.<br>
 
 At this point, the system is fully enclosed, thoroughly tested, and ready for real-world deployment or future feature expansions like an on-device card/PIN management interface and power-saving modes.
-## Modifications Video
 
 # Final Milestone
+<iframe width="560" height="315" src="https://www.youtube.com/embed/3zZ4RvGA0gg?si=Tn82DTR2EeVxfAKj" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+## Summary
 In the weeks since Milestone 2, I’ve fully brought together hardware, firmware, and enclosure into a polished, functioning prototype. The two-card RFID logic now runs flawlessly: after scanning each authorized UID in sequence, the latch servo unlocks and the MG995 motor snaps the tray open; the system stays unlocked until a simple push-button returns the motor to its rest position and re-locks the latch. All user-feedback elements—LCD prompts, green/red LEDs, and buzzer tones—work in concert to guide someone through each step without confusion.
 
 ## Challanges
 My biggest challenge at BSE was wrestling with the RFID reader’s state machine: preventing it from “sticking” on the first tag and learning to reinitialize it correctly after card removal. Overcoming that quagmire felt like a real triumph, and it taught me the value of methodical, blocking-vs-nonblocking I/O patterns in embedded code. Another highlight was designing and fitting all components into a single enclosure—measuring, bracket-prototyping in CAD, and iterating until every module had its perfect home without wires catching or servos binding.
+
 ## What did I learn
-Through this project I’ve deepened my understanding of RFID communication (MFRC522 library quirks, UID parsing, reader resets); I²C peripherals (LCD backpack setup, contrast tuning, address scanning); Servo control (precise angle mapping, power-bank decoupling, timing with millis() vs. delay()); Stateful UI design (LCD prompts, LED/buzzer feedback, push-button state machines)<br>
+Through this project I’ve deepened my understanding of RFID communication (MFRC522 library quirks, UID parsing, reader resets); I²C peripherals (LCD backpack setup, contrast tuning, address scanning); Servo control (precise angle mapping, power-bank decoupling, timing with millisecond vs. delay for a certain amount of time); Stateful UI design (LCD prompts, LED/buzzer feedback, push-button state machines)<br>
 
 Looking ahead, I’m excited to explore more advanced topics in embedded systems—secure over-the-air firmware updates, wireless keycards (BLE/NFC), low-power optimization, and encrypted authentication. The foundation I’ve built at BSE gives me confidence to tackle networked IoT devices and professional-grade access controllers in the future.
 
-## Final Milestone Video
-<iframe width="560" height="315" src="https://www.youtube.com/embed/3zZ4RvGA0gg?si=Tn82DTR2EeVxfAKj" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
 # Second Milestone
+<iframe width="560" height="315" src="https://www.youtube.com/embed/fDCb2J9xpOk?si=-7EMGv_uoDvhrFOk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+## Summary
 For my second milestone, I dedicated my time entirely to fleshing out the core authentication code and user‐feedback routines that ties every component together. First, I integrated the MFRC522 library and wrote a robust readCard() helper that blocks until a tag is present, reads its 4-byte UID into a buffer, and halts the reader cleanly. I then built an isAuthorized() function that compares that buffer against a hard-coded list of allowed UIDs. To ensure the two-card requirement, I added logic to store the first UID, wait until that tag is removed (polling PICC_IsNewCardPresent() until it’s gone), and then loop until a second, distinct authorized UID is presented.
 
 On top of that, I encapsulated all user messaging in a single showMessage() routine that both writes to the I²C LCD and echoes the same text over Serial. This proved invaluable for headless debugging, as I could watch every state transition (“Card 1 OK,” “Please Scan Card #2,” etc.) in parallel with the display. I also implemented the LED and buzzer feedback: the red LED now pulses on any invalid scan, while Green #1 lights immediately after a valid first card and Green #2 comes on only when the second card passes. All of these signals persist exactly until the next state, then clear together when access is finally granted.
@@ -43,10 +42,11 @@ One surprise came from handling the reader’s “card still present” state: w
 
 ## What's next
 For the final milestone, my next step is purely mechanical integration: I’ll begin by carefully measuring the box’s interior and mapping each module’s footprint—the Arduino Uno, MG995 servo, MFRC522 antenna, I²C LCD, buzzer and LEDs—onto its walls and floor. I’ll design and fabricate simple mounting plates or brackets (using laser-cut acrylic or 3D-printed parts) to secure each component in place, then cut or drill the necessary openings for the servo arm, card swipe slot, display window and wiring harness. Simultaneously, I’ll carve out or add thin partition walls to create small trays or shelves for storing extra keycards, fobs or notes, ensuring these storage bays don’t interfere with any moving parts or cable runs. Once the brackets and cutouts are prototyped, I’ll assemble everything inside the box, verify clearances and cable management, and finalize the layout so the completed unit is both fully functional and offers convenient internal storage.
-## Second Milestone Video
-<iframe width="560" height="315" src="https://www.youtube.com/embed/fDCb2J9xpOk?si=-7EMGv_uoDvhrFOk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 # First Milestone
+<iframe width="560" height="315" src="https://www.youtube.com/embed/M0pmq5avC0Q?si=Eaqc1bn8x1eadtzN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+## Summary
 For my first milestone, I completed the construction and wiring of the core components that make up the locking function of the project. I mounted an Arduino UNO R3 (with its servo‐driver extension shield) in its enclosure and soldered the header for the MG995 servo onto the board. I then ran a dedicated 5 V supply line—complete with a 470 μF decoupling capacitor—to the servo’s red and brown leads, and connected its control wire to digital pin 6. With this hardware in place, I was able to upload a simple sweep sketch that reliably moves the servo arm between its horizontal “rest” position and the 90° CCW “active” position needed to retract the lock.
 
 On the software side, I have verified that the MG995 will consistently hit both its start-and-end angles when powered from both USB and battery sources. To eliminate voltage sag during motion, I tested the system on a USB power bank and observed stable performance once the capacitor was in place. I also established a common ground between the Arduino and the external supply, ensuring the servo and controller share a reference. These early tests give me confidence that the locking mechanism will operate smoothly under standalone battery power.
@@ -56,16 +56,12 @@ The primary challenges will be integrating the MFRC522 RFID reader and implement
 
 ## What's next
 Looking ahead from this hardware‐focused first milestone, my very next steps are pure firmware work: I will integrate the MFRC522 library and write the dual‐card authentication routine that reads, buffers, and compares two distinct UIDs in sequence; build a state-driven showMessage() API that drives the I²C LCD and echoes states over Serial; implement the LED and buzzer signaling logic so that green LED#1 lights on a valid first card, green LED#2 only after the second, and the red LED and error tones fire on any invalid scan; and tie it all together with clean, nonblocking loops that halt and reinitialize the reader correctly between scans. Completing this coding phase will prove the full access-control flow before I move on to final refinements and enclosure design.
-## First Milestone Video
-
-<!---**Don't forget to replace the text below with the embedding for your milestone video. Go to Youtube, click Share -> Embed, and copy and paste the code to replace what's below.*-->
-<iframe width="560" height="315" src="https://www.youtube.com/embed/M0pmq5avC0Q?si=Eaqc1bn8x1eadtzN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 # Starter Project
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=4jDJQshDIgnvTNb1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-## Explanation
+## Summary
 
 For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and a Slot Machine. Each game utilizes the inputs from the D-Pad style buttons for diffrent functions, as well as the green and yellow button for confirming and pausing/quitting the game. The music changes depends on what game was played, as well as what was displayed on the 7-segment display. The whole device is powered by 3 AAA batteries, or it could be powered via USB-B connection. There's also some options to adjust the brightness levels and the volume.<br>
 
