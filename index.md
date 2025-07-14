@@ -79,67 +79,63 @@ An schematic of the internal conponents (The wiring to the large breadboard is t
 
 # Code
 ```c++
-/* —— Authorized UIDs —— Just a copy of all the authorized cards, so I don't have to re-type it everytime
-byte cards[][10] = {
-  {138,  63,   230,   63},
-  {160, 170,  22,   8},
-  {165, 63,   230,  63},
-  {189 ,87,  203,  145},
-  {138,56,8,5},
-  {167,63,230,63}
-};*/
-
-
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Servo.h>
+#include <Keypad.h>
 
 // —— Pins ——
 #define SS_PIN           10   // RFID SS
-#define RST_PIN           9    // RFID RST (wired to Arduino D9)
-#define LOCK_PIN          3    // latch‐servo
-#define MG995_PIN         6    // MG995 motor‐servo
-#define SG90_PIN          A1   // SG90 motor‐servo
-#define BUZZER_PIN        8    // active buzzer
+#define RST_PIN           9    // RFID RST
+#define MG995_PIN         6    // MG995 servo
+#define SG90_PIN          A1   // SG90 servo
 #define LED_RED_PIN       7    // error LED
-#define LED_GREEN1_PIN    2    // card1 OK
-#define LED_GREEN2_PIN    4    // card2 OK
-#define BUTTON_PIN        5    // one leg → D5, other → GND
+#define LED_GREEN1_PIN    2    // Card 1 OK LED
+#define LED_GREEN2_PIN    4    // Card 2 OK LED
+#define BUTTON_PIN        5    // manual reset button (D5 → GND)
 
 // —— Servo angles & timing ——
-const uint8_t   MOTOR_REST_ANGLE    = 90;
-const uint8_t   MOTOR_ACTIVE_ANGLE  = 180;
-const uint8_t   SG90_ACTIVE_ANGLE   = 0;    // inverted direction for SG90
-const unsigned long MOTOR_HOLD_MS   = 2000;
+const uint8_t   MOTOR_REST_ANGLE   = 90;
+const uint8_t   MOTOR_ACTIVE_ANGLE = 180;
+const uint8_t   SG90_ACTIVE_ANGLE  =   0;
+const unsigned long MOTOR_HOLD_MS  = 2000;
 
-// —— I²C LCD ——
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// —— 4×4 Keypad setup ——
+const byte ROWS = 4, COLS = 4;
+byte rowPins[ROWS] = {22, 23, 24, 25};  // rows → D22, D23, D24, D25
+byte colPins[COLS] = {26, 27, 28, 29};  // cols → D26, D27, D28, D29
+char keys[ROWS][COLS] = {
+  {'1','4','7','*'},
+  {'2','5','8','0'},
+  {'3','6','9','#'},
+  {'A','B','C','D'}
+};
+Keypad keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-// —— RFID reader & servos ——
-MFRC522 rfid(SS_PIN, RST_PIN);
-Servo    lockServo, motorMG995, motorSG90;
+// —— Passcode params ——
+#define PASSCODE_LENGTH 18
+const String PASSCODE = "110106200711200312";
 
 // —— Authorized UIDs ——
-byte cards[][10] = {
-  {138,  63,   230,   63},
-  {160, 170,  22,   8},
-  {165, 63,   230,  63},
-  {189 ,87,  203,  145},
-  {138,56,8,5},
-  {167,63,230,63}
+byte cards[][4] = {
+  {160, 170, 22,  8},
+  {138,  56,  8,  5}
 };
 
-bool unlocked = false;
-bool unlockMsgShown = false;
+bool unlocked = false, unlockMsgShown = false;
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+MFRC522         rfid(SS_PIN, RST_PIN);
+Servo           motorMG995, motorSG90;
 
 void setup() {
   Serial.begin(9600);
   Wire.begin();
   SPI.begin();
 
-  // force‐reset MFRC522
+  // Initialize RFID
   pinMode(RST_PIN, OUTPUT);
   digitalWrite(RST_PIN, LOW);
   delay(50);
@@ -147,74 +143,66 @@ void setup() {
   delay(50);
   rfid.PCD_Init();
 
-  // latch‐servo
-  lockServo.attach(LOCK_PIN);
-  lockServo.write(5);  // locked start
-
-  // MG995 servo
+  // Attach servos at rest
   motorMG995.attach(MG995_PIN);
   motorMG995.write(MOTOR_REST_ANGLE);
-
-  // SG90 servo (inverted)
   motorSG90.attach(SG90_PIN);
   motorSG90.write(MOTOR_REST_ANGLE);
 
-  pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(LED_RED_PIN,    OUTPUT);
-  pinMode(LED_GREEN1_PIN, OUTPUT);
-  pinMode(LED_GREEN2_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
-  digitalWrite(LED_RED_PIN,    LOW);
-  digitalWrite(LED_GREEN1_PIN, LOW);
-  digitalWrite(LED_GREEN2_PIN, LOW);
+  // LEDs off
+  pinMode(LED_RED_PIN,    OUTPUT); digitalWrite(LED_RED_PIN,    LOW);
+  pinMode(LED_GREEN1_PIN, OUTPUT); digitalWrite(LED_GREEN1_PIN, LOW);
+  pinMode(LED_GREEN2_PIN, OUTPUT); digitalWrite(LED_GREEN2_PIN, LOW);
 
+  // Button
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
+  // LCD
   lcd.init();
   lcd.backlight();
   showMessage("Please Scan", "Card #1");
 }
 
 void loop() {
-  // — Manual re‐lock block —
+  // Manual reset block
   if (unlocked) {
     if (!unlockMsgShown) {
-      showMessage("Press Button", "to Lock");
+      showMessage("Hold Button", "3s to Lock");
       unlockMsgShown = true;
     }
     if (digitalRead(BUTTON_PIN) == LOW) {
-      delay(50);
-      while (digitalRead(BUTTON_PIN) == LOW) delay(10);
-
-      // Return both servos to rest
-      showMessage("Locking", "Please Wait");
-      delay(1000);
-      motorMG995.write(MOTOR_REST_ANGLE);
-      motorSG90.write(MOTOR_REST_ANGLE);
-      tone(BUZZER_PIN, 1000, 100);
-
-      // Reset LEDs & state
-      digitalWrite(LED_GREEN1_PIN, LOW);
-      digitalWrite(LED_GREEN2_PIN, LOW);
-      unlocked = false;
-      unlockMsgShown = false;
-
-      delay(500);
-      showMessage("Please Scan", "Card #1");
+      unsigned long pressStart = millis();
+      // wait while still held, but break early if released
+      while (digitalRead(BUTTON_PIN) == LOW) {
+        if (millis() - pressStart >= 3000) {
+          // 3 seconds held
+          showMessage("Locking", "Please Wait");
+          delay(1000);
+          motorMG995.write(MOTOR_REST_ANGLE);
+          motorSG90.write(MOTOR_REST_ANGLE);
+          digitalWrite(LED_GREEN1_PIN, LOW);
+          digitalWrite(LED_GREEN2_PIN, LOW);
+          unlocked = unlockMsgShown = false;
+          delay(500);
+          showMessage("Please Scan", "Card #1");
+          break;
+        }
+      }
+      // debounce
+      delay(100);
     }
     return;
   }
 
+  // Two‐card authentication
   byte uid1[4], uid2[4];
-
-  // — Card #1 —
   showMessage("Please Scan", "Card #1");
   readCardBlocking(uid1);
   exportUID(uid1, 4);
   if (!isAuthorized(uid1)) {
     indicateWrong();
-    deny("Card 1 Invalid");
-    delay(500);
+    delay(3000);
+    digitalWrite(LED_RED_PIN, LOW);
     return;
   }
   digitalWrite(LED_GREEN1_PIN, HIGH);
@@ -223,19 +211,20 @@ void loop() {
   delay(1000);
   waitForRemoval();
 
-  // — Card #2 —
   while (true) {
     showMessage("Please Scan", "Card #2");
     readCardBlocking(uid2);
     exportUID(uid2, 4);
     if (!isAuthorized(uid2)) {
       indicateWrong();
-      deny("Card 2 Invalid");
+      delay(3000);
+      digitalWrite(LED_RED_PIN, LOW);
       continue;
     }
     if (memcmp(uid1, uid2, 4) == 0) {
       indicateWrong();
-      deny("Same Card");
+      delay(3000);
+      digitalWrite(LED_RED_PIN, LOW);
       continue;
     }
     digitalWrite(LED_GREEN2_PIN, HIGH);
@@ -244,20 +233,39 @@ void loop() {
     break;
   }
 
-  // — Grant access & enter manual‐relock mode —
+  // Passcode entry: '*' clears, '#' confirms
+  showMessage("Enter Passcode", "");
+  String entry = "";
+  lcd.setCursor(0, 1);
+  while (true) {
+    char k = keypad.getKey();
+    if (!k) continue;
+    if (k == '*') {
+      entry = "";
+      lcd.setCursor(0, 1);
+      for (byte i = 0; i < PASSCODE_LENGTH; i++) lcd.print(' ');
+      lcd.setCursor(0, 1);
+    } 
+    else if (k == '#') {
+      break;
+    } 
+    else if (entry.length() < PASSCODE_LENGTH) {
+      entry += k;
+      lcd.print('*');
+    }
+  }
+  if (entry != PASSCODE) {
+    indicateWrong();
+    delay(3000);
+    digitalWrite(LED_RED_PIN, LOW);
+    return;
+  }
+
+  // Grant access
   showMessage("Access Granted", "");
-  tone(BUZZER_PIN, 1000, 300);
-  delay(300);
-
-  // Open latch
-  lockServo.write(90);
-  delay(500);
-
-  // Move MG995 and SG90 (inverted)
   motorMG995.write(MOTOR_ACTIVE_ANGLE);
   motorSG90.write(SG90_ACTIVE_ANGLE);
   delay(MOTOR_HOLD_MS);
-
   unlocked = true;
 }
 
@@ -278,40 +286,27 @@ void waitForRemoval() {
 }
 
 bool isAuthorized(byte uid[4]) {
-  for (size_t i = 0; i < sizeof(cards)/sizeof(cards[0]); i++)
+  for (size_t i = 0; i < sizeof(cards) / sizeof(cards[0]); i++)
     if (memcmp(cards[i], uid, 4) == 0) return true;
   return false;
 }
 
-void showMessage(const char* l1, const char* l2) {
+void showMessage(const char *l1, const char *l2) {
   lcd.clear();
-  lcd.setCursor(0,0); lcd.print(l1);
-  lcd.setCursor(0,1); lcd.print(l2);
+  lcd.setCursor(0, 0); lcd.print(l1);
+  lcd.setCursor(0, 1); lcd.print(l2);
   Serial.print(l1);
-  if (*l2) { Serial.print("  |  "); Serial.print(l2); }
+  if (*l2) {
+    Serial.print(" | ");
+    Serial.print(l2);
+  }
   Serial.println();
 }
 
 void indicateWrong() {
-  digitalWrite(LED_RED_PIN,    HIGH);
+  digitalWrite(LED_RED_PIN, HIGH);
   digitalWrite(LED_GREEN1_PIN, LOW);
   digitalWrite(LED_GREEN2_PIN, LOW);
-}
-
-void deny(const char* msg) {
-  showMessage(msg, "");
-  // two short beeps
-  for (int i = 0; i < 2; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(100);
-    digitalWrite(BUZZER_PIN, LOW);
-    delay(100);
-  }
-  // brief pause before red LED timeout
-  delay(800);
-  // keep red LED on for 3 seconds total
-  delay(3000);
-  digitalWrite(LED_RED_PIN, LOW);
 }
 
 void exportUID(byte uid[], byte len) {
