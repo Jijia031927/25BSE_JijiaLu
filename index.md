@@ -372,5 +372,5 @@ Don't forget to place the link of where to buy each component inside the quotati
 Here's some links to the resources that helped me construct this project.
 - [RFID Module Help](https://www.digikey.com/en/maker/projects/how-to-make-an-arduino-based-rfid-box-lock/a57d9f8ad28043d1b56acbd34d8a55de)
 - [Similar Concept-Biometric + Keypad Lockbox](https://sviatil0.github.io/Sviatoslav_BSE/](https://gracewanggg.github.io/Grace_BSE_Portfolio/))
-- [ChatGPT](https://chatgpt.com/share/687182d3-db38-8002-b1a7-1da8e7cc0692)
+- [ChatGPT-RFID Lockbox Help](https://chatgpt.com/share/687182d3-db38-8002-b1a7-1da8e7cc0692)
 - [Wiring the RFID To The Arduino](https://www.instructables.com/Arduino-MFRC522-RFID-READER/)
