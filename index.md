@@ -78,7 +78,7 @@ I used a LED Matrix x2, 7 Segment Display, Buzzer, Button x7, Capacitor, Battery
 
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
-<img src="Screenshot 2025-07-11 at 15.05.18.png" alt="Alt Text" style="width:75%; height:auto;">
+<img src="Screenshot 2025-07-11 at 15.05.18.png" alt="Alt Text" style="width:75%; height:auto;"><br>
 An schematic of the internal conponents (The wiring to the large breadboard is the wiring to the RFID reader).
 
 # Code
