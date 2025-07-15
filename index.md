@@ -87,25 +87,36 @@ An schematic of the internal conponents (The wiring to the large breadboard is t
 #include <Keypad.h>
 
 // —— Pins ——
-#define SS_PIN           10   // RFID SS
-#define RST_PIN           9    // RFID RST
-#define MG995_PIN         6    // MG995 servo
+#define SS_PIN            10   // RFID SS
+#define RST_PIN            9   // RFID RST
+#define MG995_PIN          6   // MG995 servo
 #define SG90_PIN          A1   // SG90 servo
-#define LED_RED_PIN       7    // error LED
-#define LED_GREEN1_PIN    2    // Card 1 OK LED
-#define LED_GREEN2_PIN    4    // Card 2 OK LED
-#define BUTTON_PIN        5    // manual reset button (D5 → GND)
+#define LED_RED_PIN        7   // error LED
+#define LED_GREEN1_PIN     2   // original card1 OK LED
+#define LED_GREEN2_PIN     4   // original card2 OK LED
+#define BUTTON_PIN         5   // manual reset button (D5 → GND)
+
+// —— RGB LED #1 pins ——
+#define RGB1_R_PIN        41
+#define RGB1_G_PIN        43
+#define RGB1_B_PIN        45
+
+// —— RGB LED #2 pins ——
+#define RGB2_R_PIN        33
+#define RGB2_G_PIN        35
+#define RGB2_B_PIN        37
 
 // —— Servo angles & timing ——
 const uint8_t   MOTOR_REST_ANGLE   = 90;
 const uint8_t   MOTOR_ACTIVE_ANGLE = 180;
+const uint8_t   SG90_REST_ANGLE    = MOTOR_REST_ANGLE; // same rest as MG995
 const uint8_t   SG90_ACTIVE_ANGLE  =   0;
 const unsigned long MOTOR_HOLD_MS  = 2000;
 
 // —— 4×4 Keypad setup ——
 const byte ROWS = 4, COLS = 4;
-byte rowPins[ROWS] = {22, 23, 24, 25};  // rows → D22, D23, D24, D25
-byte colPins[COLS] = {26, 27, 28, 29};  // cols → D26, D27, D28, D29
+byte rowPins[ROWS] = { 22, 23, 24, 25 };
+byte colPins[COLS] = { 26, 27, 28, 29 };
 char keys[ROWS][COLS] = {
   {'1','4','7','*'},
   {'2','5','8','0'},
@@ -120,8 +131,8 @@ const String PASSCODE = "110106200711200312";
 
 // —— Authorized UIDs ——
 byte cards[][4] = {
-  {160, 170, 22,  8},
-  {138,  56,  8,  5}
+  {192,146,89, 7},
+  {138, 56,  8, 5}
 };
 
 bool unlocked = false, unlockMsgShown = false;
@@ -130,29 +141,60 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 MFRC522         rfid(SS_PIN, RST_PIN);
 Servo           motorMG995, motorSG90;
 
+// — Color wheel helper —  
+void wheel(byte pos, uint8_t &r, uint8_t &g, uint8_t &b) {
+  if (pos < 85) {
+    r = 255 - pos * 3;
+    g = pos * 3;
+    b = 0;
+  } else if (pos < 170) {
+    pos -= 85;
+    r = 0;
+    g = 255 - pos * 3;
+    b = pos * 3;
+  } else {
+    pos -= 170;
+    r = pos * 3;
+    g = 0;
+    b = 255 - pos * 3;
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   Wire.begin();
   SPI.begin();
 
-  // Initialize RFID
+  // RFID init
   pinMode(RST_PIN, OUTPUT);
-  digitalWrite(RST_PIN, LOW);
-  delay(50);
-  digitalWrite(RST_PIN, HIGH);
-  delay(50);
+  digitalWrite(RST_PIN, LOW);  delay(50);
+  digitalWrite(RST_PIN, HIGH); delay(50);
   rfid.PCD_Init();
 
-  // Attach servos at rest
+  // Servos at rest
   motorMG995.attach(MG995_PIN);
   motorMG995.write(MOTOR_REST_ANGLE);
   motorSG90.attach(SG90_PIN);
-  motorSG90.write(MOTOR_REST_ANGLE);
+  motorSG90.write(SG90_REST_ANGLE);
 
-  // LEDs off
+  // Single-color LEDs
   pinMode(LED_RED_PIN,    OUTPUT); digitalWrite(LED_RED_PIN,    LOW);
   pinMode(LED_GREEN1_PIN, OUTPUT); digitalWrite(LED_GREEN1_PIN, LOW);
   pinMode(LED_GREEN2_PIN, OUTPUT); digitalWrite(LED_GREEN2_PIN, LOW);
+
+  // RGB LEDs
+  pinMode(RGB1_R_PIN, OUTPUT);
+  pinMode(RGB1_G_PIN, OUTPUT);
+  pinMode(RGB1_B_PIN, OUTPUT);
+  pinMode(RGB2_R_PIN, OUTPUT);
+  pinMode(RGB2_G_PIN, OUTPUT);
+  pinMode(RGB2_B_PIN, OUTPUT);
+  analogWrite(RGB1_R_PIN, 0);
+  analogWrite(RGB1_G_PIN, 0);
+  analogWrite(RGB1_B_PIN, 0);
+  analogWrite(RGB2_R_PIN, 0);
+  analogWrite(RGB2_G_PIN, 0);
+  analogWrite(RGB2_B_PIN, 0);
 
   // Button
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -164,37 +206,60 @@ void setup() {
 }
 
 void loop() {
-  // Manual reset block
+  // — Manual reset + continuous rainbow with 3s hold —
   if (unlocked) {
     if (!unlockMsgShown) {
-      showMessage("Hold Button", "3s to Lock");
+      showMessage("Hold Button", "to Lock");
       unlockMsgShown = true;
     }
-    if (digitalRead(BUTTON_PIN) == LOW) {
-      unsigned long pressStart = millis();
-      // wait while still held, but break early if released
-      while (digitalRead(BUTTON_PIN) == LOW) {
+
+    uint16_t hue = 0;
+    unsigned long pressStart = 0;
+
+    while (true) {
+      // rainbow step
+      uint8_t r, g, b;
+      wheel(hue & 0xFF, r, g, b);
+      analogWrite(RGB1_R_PIN, r);
+      analogWrite(RGB1_G_PIN, g);
+      analogWrite(RGB1_B_PIN, b);
+      analogWrite(RGB2_R_PIN, r);
+      analogWrite(RGB2_G_PIN, g);
+      analogWrite(RGB2_B_PIN, b);
+      hue++;
+      delay(20);
+
+      // check button
+      if (digitalRead(BUTTON_PIN) == LOW) {
+        if (pressStart == 0) pressStart = millis();
+        // 3s threshold
         if (millis() - pressStart >= 3000) {
-          // 3 seconds held
+          // perform reset
           showMessage("Locking", "Please Wait");
           delay(1000);
           motorMG995.write(MOTOR_REST_ANGLE);
-          motorSG90.write(MOTOR_REST_ANGLE);
+          motorSG90.write(SG90_REST_ANGLE);
           digitalWrite(LED_GREEN1_PIN, LOW);
           digitalWrite(LED_GREEN2_PIN, LOW);
+          analogWrite(RGB1_R_PIN, 0);
+          analogWrite(RGB1_G_PIN, 0);
+          analogWrite(RGB1_B_PIN, 0);
+          analogWrite(RGB2_R_PIN, 0);
+          analogWrite(RGB2_G_PIN, 0);
+          analogWrite(RGB2_B_PIN, 0);
           unlocked = unlockMsgShown = false;
           delay(500);
           showMessage("Please Scan", "Card #1");
-          break;
+          return;
         }
+      } else {
+        // reset timer if released early
+        pressStart = 0;
       }
-      // debounce
-      delay(100);
     }
-    return;
   }
 
-  // Two‐card authentication
+  // — Two-card authentication —
   byte uid1[4], uid2[4];
   showMessage("Please Scan", "Card #1");
   readCardBlocking(uid1);
@@ -233,7 +298,7 @@ void loop() {
     break;
   }
 
-  // Passcode entry: '*' clears, '#' confirms
+  // — Passcode entry (‘*’ clears, ‘#’ confirms) —
   showMessage("Enter Passcode", "");
   String entry = "";
   lcd.setCursor(0, 1);
@@ -261,7 +326,7 @@ void loop() {
     return;
   }
 
-  // Grant access
+  // — Grant access —
   showMessage("Access Granted", "");
   motorMG995.write(MOTOR_ACTIVE_ANGLE);
   motorSG90.write(SG90_ACTIVE_ANGLE);
@@ -286,7 +351,7 @@ void waitForRemoval() {
 }
 
 bool isAuthorized(byte uid[4]) {
-  for (size_t i = 0; i < sizeof(cards) / sizeof(cards[0]); i++)
+  for (size_t i = 0; i < sizeof(cards)/sizeof(cards[0]); i++)
     if (memcmp(cards[i], uid, 4) == 0) return true;
   return false;
 }
