@@ -10,6 +10,7 @@ My intensive project is an Arduino-based, two-card RFID access controller that o
 # Modifications
 
 <!--Video here-->
+
 ## Summary
 With the addition of the 4×4 keypad, flexible UID matching, and dual-servo actuation on two separate locking cams, this prototype now delivers full two-factor security and redundant mechanical control. Under the hood, I wired and debounced a 4×4 matrix keypad into spare analog pins, echoing on the I²C LCD and gating access only after two valid card scans; Relaxed the RFID UID comparison to allow ±1-byte variance for reliable reads in noisy conditions; Added a secondary SG90 servo alongside the MG995—each driving its own lock cam—so that “Access Granted” moves both latches in unison, and the manual lock button returns both to rest; Inserted 50 ms SPI pauses and briefly disabled interrupts during RFID reads to prevent collisions with keypad scanning; Enhanced user feedback with clear LCD menus, distinct correct/incorrect chimes (G3→C4 vs. G3→C3), red/green LEDs, and a manual re-lock button.<br>
 
@@ -398,7 +399,7 @@ Here's some links to the resources that helped me construct this project.
 - [ChatGPT-RFID Lockbox Help](https://chatgpt.com/share/687182d3-db38-8002-b1a7-1da8e7cc0692)
 - [Wiring the RFID To The Arduino](https://www.instructables.com/Arduino-MFRC522-RFID-READER/)
 
-- # Starter Project
+# Starter Project
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=4jDJQshDIgnvTNb1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
