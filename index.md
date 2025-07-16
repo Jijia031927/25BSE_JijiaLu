@@ -57,21 +57,6 @@ The primary challenges will be integrating the MFRC522 RFID reader and implement
 ## What's next
 Looking ahead from this hardware‐focused first milestone, my very next steps are pure firmware (coding) work: I will integrate the MFRC522 library and write the dual‐card authentication routine that reads, buffers, and compares two distinct UIDs in sequence; build a state-driven showMessage() function that drives the I²C LCD and echoes states over the Serial Monitor (SM); implement the LED and buzzer signaling logic so that green LED#1 lights on a valid first card, green LED#2 only after the second, and the red LED lits on any invalid scan; and tie it all together with clean, nonblocking loops that halt and reinitialize the reader correctly between scans. Completing this coding phase will prove the full access-control flow before I move on to final refinements and enclosure design.
 
-# Starter Project
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=4jDJQshDIgnvTNb1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-## Summary
-
-For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and a Slot Machine. Each game utilizes the inputs from the D-Pad style buttons for diffrent functions, as well as the green and yellow button for confirming and pausing/quitting the game. The music changes depends on what game was played, as well as what was displayed on the 7-segment display. The whole device is powered by 3 AAA batteries, or it could be powered via USB-B connection. There's also some options to adjust the brightness levels and the volume.<br>
-
-## Challanges
-During the process of constructing the console, the biggest challenge for me was to not accidentally solder two joints toghether, as that could create a short between them. But because I've soldered a lot before, this wasn't a huge issue for me, I just slowed down and was more careful, and the soldering turned out great with everything working as it should. But the real issue that prevented me from completing the project easily was the unclear instruction. The phamplet included in my kit are missing some of the crutial steps like where to solder the wires to, which direction each conponent should face, and what types of wiring should you use. In the end, I figured out how each will work toghether and where they would go by looking up info online, and asking my friends for advices.
-
-# How it works
-I used a LED Matrix x2, 7 Segment Display, Buzzer, Button x7, Capacitor, Battery holder, AAA Battery x3, Transparent Acrylic Shell x 6, ICM (Intergrated Circuit Processor), and PCB. The ICM processes the inputs from the 7 buttons/switches and outputs to the screen and 7-segment display.
-
-
 # Schematics 
 <!---Tinkercad](https://www.tinkercad.com/blog/official-guide-to-tinkercad-circuits) and [Fritzing](https://fritzing.org/learning/)-->
 <img src="Screenshot 2025-07-11 at 15.05.18.png" alt="Alt Text" style="width:75%; height:auto;"><br>
@@ -412,3 +397,19 @@ Here's some links to the resources that helped me construct this project.
 - [Similar Concept-Biometric + Keypad Lockbox](https://sviatil0.github.io/Sviatoslav_BSE/](https://gracewanggg.github.io/Grace_BSE_Portfolio/))
 - [ChatGPT-RFID Lockbox Help](https://chatgpt.com/share/687182d3-db38-8002-b1a7-1da8e7cc0692)
 - [Wiring the RFID To The Arduino](https://www.instructables.com/Arduino-MFRC522-RFID-READER/)
+
+- # Starter Project
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/q2iCdOoT5WA?si=4jDJQshDIgnvTNb1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+## Summary
+
+For my starter project, I chose the Retro Gaming Console. This device recreates the gaming console from a few decades ago, including games like Tetris, Snake.io, Plane Racing, Space Defender and a Slot Machine. Each game utilizes the inputs from the D-Pad style buttons for diffrent functions, as well as the green and yellow button for confirming and pausing/quitting the game. The music changes depends on what game was played, as well as what was displayed on the 7-segment display. The whole device is powered by 3 AAA batteries, or it could be powered via USB-B connection. There's also some options to adjust the brightness levels and the volume.<br>
+
+## Challanges
+During the process of constructing the console, the biggest challenge for me was to not accidentally solder two joints toghether, as that could create a short between them. But because I've soldered a lot before, this wasn't a huge issue for me, I just slowed down and was more careful, and the soldering turned out great with everything working as it should. But the real issue that prevented me from completing the project easily was the unclear instruction. The phamplet included in my kit are missing some of the crutial steps like where to solder the wires to, which direction each conponent should face, and what types of wiring should you use. In the end, I figured out how each will work toghether and where they would go by looking up info online, and asking my friends for advices.
+
+# How it works
+I used a LED Matrix x2, 7 Segment Display, Buzzer, Button x7, Capacitor, Battery holder, AAA Battery x3, Transparent Acrylic Shell x 6, ICM (Intergrated Circuit Processor), and PCB. The ICM processes the inputs from the 7 buttons/switches and outputs to the screen and 7-segment display.
+
+
