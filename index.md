@@ -73,29 +73,20 @@ An schematic of the internal conponents (The wiring to the large breadboard is t
 #include <Keypad.h>
 
 // —— Pins ——  
-#define SS_PIN            10   // RFID SS  
-#define RST_PIN            9   // RFID RST  
-#define MG995_PIN          6   // MG995 servo  
-#define LED_RED_PIN        7   // error LED  
-#define LED_GREEN1_PIN     2   // card1 OK LED  
-#define LED_GREEN2_PIN     4   // card2 OK LED  
-#define BUTTON_PIN         5   // reset‐hold button (D5 → GND)  
-#define LID_PIN           A0   // lid switch (NO → A0, C → GND)  
+#define SS_PIN           10   // RFID SS  
+#define RST_PIN           9   // RFID RST  
+#define LATCH_PIN         6   // latch servo  
+#define SWING_PIN        A1   // swing servo  
+#define BUTTON_PIN        5   // hold-to-lock button  
 
-// —— RGB LEDs ——  
-#define RGB1_R_PIN        41  
-#define RGB1_G_PIN        43  
-#define RGB1_B_PIN        45  
-#define RGB2_R_PIN        33  
-#define RGB2_G_PIN        35  
-#define RGB2_B_PIN        37  
-
-// —— Servo positions & timing ——  
-const uint8_t MOTOR_REST_ANGLE   = 90;  
-const uint8_t MOTOR_ACTIVE_ANGLE = 180;  
+// —— Servo angles & timing ——  
+const uint8_t MOTOR_REST_ANGLE    = 90;  
+const uint8_t MOTOR_ACTIVE_ANGLE  = 180;  
+const uint8_t SWING_REST_ANGLE    = 90;  
+const uint8_t SWING_ACTIVE_ANGLE  =   0;  
 const unsigned long MOTOR_HOLD_MS = 2000;
 
-// —— Keypad setup ——  
+// —— 4×4 Keypad setup ——  
 const byte ROWS = 4, COLS = 4;  
 byte rowPins[ROWS] = {22,23,24,25};  
 byte colPins[COLS] = {26,27,28,29};  
@@ -107,78 +98,87 @@ char keys[ROWS][COLS] = {
 };  
 Keypad keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-// —— Passcodes ——  
+// —— Passcode & Bypass ——  
 #define PASSCODE_LENGTH 18  
 const String PASSCODE    = "110106200711200312";  
-
 #define BYPASS_LENGTH   13  
 const String BYPASS_CODE = "314159268000D";  
 
 // —— Authorized UIDs ——  
 byte cards[][4] = {  
-  {192,146, 89,  7},  
-  {138, 56,  8,  5}  
+  {192,146, 89, 7},  
+  {138, 56,   8, 5}  
 };
 
 bool unlocked = false, unlockMsgShown = false;
 
 LiquidCrystal_I2C lcd(0x27,16,2);  
 MFRC522         rfid(SS_PIN, RST_PIN);  
-Servo           motorMG995;
-
-// — Color‐wheel helper —  
-void wheel(byte pos, uint8_t &r, uint8_t &g, uint8_t &b) {
-  if (pos < 85)      { r = 255 - pos*3; g = pos*3;   b = 0; }
-  else if (pos <170) { pos -= 85;    r = 0;         g = 255 - pos*3; b = pos*3; }
-  else               { pos -= 170;   r = pos*3;     g = 0;          b = 255 - pos*3; }
-}
+Servo           latchServo, swingServo;
 
 void setup() {
   Serial.begin(9600);
   Wire.begin();
-  SPI.begin();
 
-  // RFID init  
+  // LCD  
+  lcd.init();
+  lcd.backlight();
+
+  // RFID  
+  SPI.begin();
   pinMode(RST_PIN, OUTPUT);
   digitalWrite(RST_PIN, LOW);  delay(50);
   digitalWrite(RST_PIN, HIGH); delay(50);
   rfid.PCD_Init();
 
-  // MG995 servo at rest  
-  motorMG995.attach(MG995_PIN);
-  motorMG995.write(MOTOR_REST_ANGLE);
+  // Servos at rest  
+  latchServo.attach(LATCH_PIN);
+  latchServo.write(MOTOR_REST_ANGLE);
+  swingServo.attach(SWING_PIN);
+  swingServo.write(SWING_REST_ANGLE);
 
-  // Single‐color LEDs  
-  pinMode(LED_RED_PIN,    OUTPUT); digitalWrite(LED_RED_PIN,    LOW);
-  pinMode(LED_GREEN1_PIN, OUTPUT); digitalWrite(LED_GREEN1_PIN, LOW);
-  pinMode(LED_GREEN2_PIN, OUTPUT); digitalWrite(LED_GREEN2_PIN, LOW);
-
-  // RGB LEDs  
-  pinMode(RGB1_R_PIN, OUTPUT);
-  pinMode(RGB1_G_PIN, OUTPUT);
-  pinMode(RGB1_B_PIN, OUTPUT);
-  pinMode(RGB2_R_PIN, OUTPUT);
-  pinMode(RGB2_G_PIN, OUTPUT);
-  pinMode(RGB2_B_PIN, OUTPUT);
-  analogWrite(RGB1_R_PIN,0); analogWrite(RGB1_G_PIN,0); analogWrite(RGB1_B_PIN,0);
-  analogWrite(RGB2_R_PIN,0); analogWrite(RGB2_G_PIN,0); analogWrite(RGB2_B_PIN,0);
-
-  // Buttons & switch  
+  // Button  
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-  pinMode(LID_PIN,    INPUT_PULLUP);  // NO contact closes to GND when lid is down
 
-  // LCD  
-  lcd.init();  
-  lcd.backlight();  
-  showMessage("Please Scan","Card #1");
+  // Initial prompt  
+  lcd.clear();
+  lcd.setCursor(0,0); lcd.print("Please Scan");
+  lcd.setCursor(0,1); lcd.print("Card");
 }
 
 void loop() {
-  // —— AUTHENTICATION PHASE (only if locked) ——  
-  if (!unlocked) {
-    // *Silent* bypass  
-    String bypass = "";  
-    bool tried = false;  
+  // — Manual relock if unlocked —
+  if (unlocked) {
+    if (!unlockMsgShown) {
+      lcd.clear();
+      lcd.setCursor(0,0); lcd.print("Hold Button");
+      lcd.setCursor(0,1); lcd.print("to Lock");
+      unlockMsgShown = true;
+    }
+    static unsigned long pressStart = 0;
+    if (digitalRead(BUTTON_PIN) == LOW) {
+      if (pressStart == 0) pressStart = millis();
+      if (millis() - pressStart >= 3000) {
+        lcd.clear();
+        lcd.setCursor(0,0); lcd.print("Locking...");
+        latchServo.write(MOTOR_REST_ANGLE);
+        swingServo.write(SWING_REST_ANGLE);
+        unlocked = unlockMsgShown = false;
+        delay(500);
+        lcd.clear();
+        lcd.setCursor(0,0); lcd.print("Please Scan");
+        lcd.setCursor(0,1); lcd.print("Card");
+      }
+    } else {
+      pressStart = 0;
+    }
+    return;
+  }
+
+  // — Hidden bypass —
+  {
+    String bypass = "";
+    bool tried = false;
     while (!rfid.PICC_IsNewCardPresent()) {
       char k = keypad.getKey();
       if (k) {
@@ -191,134 +191,73 @@ void loop() {
       delay(50);
     }
     if (tried && bypass == BYPASS_CODE) {
-      showMessage("Override","Granted");
+      lcd.clear();
+      lcd.setCursor(0,0); lcd.print("Override");
+      lcd.setCursor(0,1); lcd.print("Granted");
       delay(3000);
-      motorMG995.write(MOTOR_ACTIVE_ANGLE);
+      latchServo.write(MOTOR_ACTIVE_ANGLE);
+      swingServo.write(SWING_ACTIVE_ANGLE);
       delay(MOTOR_HOLD_MS);
       unlocked = true;
       return;
     }
+  }
 
-    // — Card #1 —  
-    byte uid1[4], uid2[4];
-    showMessage("Please Scan","Card #1");
-    readCardBlocking(uid1);
-    exportUID(uid1,4);
-    if (!isAuthorized(uid1)) {
-      indicateWrong(); delay(3000);
-      digitalWrite(LED_RED_PIN, LOW);
-      return;
-    }
-    digitalWrite(LED_GREEN1_PIN, HIGH);
-    showMessage("Card 1 OK","Remove Card");
-    delay(1000);
-    waitForRemoval();
+  // — Single-card authentication —  
+  byte uid1[4];
+  lcd.clear();  
+  lcd.setCursor(0,0); lcd.print("Please Scan");
+  lcd.setCursor(0,1); lcd.print("Card");
+  readCardBlocking(uid1);
+  if (!isAuthorized(uid1)) {
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print("Invalid Card");
+    delay(1500);
+    return;
+  }
+  lcd.clear();
+  lcd.setCursor(0,0); lcd.print("Card OK");
+  delay(1000);
+  waitForRemoval();
 
-    // — Card #2 —  
-    while (true) {
-      showMessage("Please Scan","Card #2");
-      readCardBlocking(uid2);
-      exportUID(uid2,4);
-      if (!isAuthorized(uid2)) {
-        indicateWrong(); delay(3000);
-        digitalWrite(LED_RED_PIN, LOW);
-        continue;
-      }
-      if (memcmp(uid1, uid2, 4) == 0) {
-        indicateWrong(); delay(3000);
-        digitalWrite(LED_RED_PIN, LOW);
-        continue;
-      }
-      digitalWrite(LED_GREEN2_PIN, HIGH);
-      showMessage("Card 2 OK","");
-      delay(1000);
-      break;
+  // — Passcode entry —
+  lcd.clear();
+  lcd.setCursor(0,0); lcd.print("Enter Passcode");
+  lcd.setCursor(0,1);
+  String entry = "";
+  while (true) {
+    char k = keypad.getKey();
+    if (!k) continue;
+    if (k == '*') {
+      entry = "";
+      lcd.setCursor(0,1);
+      for (int i = 0; i < PASSCODE_LENGTH; i++) lcd.print(' ');
+      lcd.setCursor(0,1);
     }
-
-    // — Passcode —  
-    showMessage("Enter Passcode","");
-    String entry = "";
-    lcd.setCursor(0,1);
-    while (true) {
-      char k = keypad.getKey();
-      if (!k) continue;
-      if (k == '*') {
-        entry = "";
-        lcd.setCursor(0,1);
-        for (byte i=0; i<PASSCODE_LENGTH; i++) lcd.print(' ');
-        lcd.setCursor(0,1);
-      }
-      else if (k == '#') break;
-      else if (entry.length() < PASSCODE_LENGTH) {
-        entry += k;
-        lcd.print('*');
-      }
+    else if (k == '#') break;
+    else if (entry.length() < PASSCODE_LENGTH) {
+      entry += k;
+      lcd.print('*');
     }
-    if (entry != PASSCODE) {
-      indicateWrong(); delay(3000);
-      digitalWrite(LED_RED_PIN, LOW);
-      return;
-    }
-
-    // — Grant access —  
-    showMessage("Access Granted","");
-    motorMG995.write(MOTOR_ACTIVE_ANGLE);
-    delay(MOTOR_HOLD_MS);
-    unlocked = true;
+    delay(50);
+  }
+  if (entry != PASSCODE) {
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print("Wrong Passcode");
+    delay(1500);
     return;
   }
 
-  // —— MANUAL RESET + RAINBOW (when unlocked) ——  
-  if (unlocked) {
-    if (!unlockMsgShown) {
-      showMessage("Hold Button","to Lock");
-      unlockMsgShown = true;
-    }
-    uint16_t hue = 0;
-    unsigned long pressStart = 0;
-    while (true) {
-      // rainbow
-      uint8_t r,g,b; wheel(hue & 0xFF, r,g,b);
-      analogWrite(RGB1_R_PIN, r); analogWrite(RGB1_G_PIN, g); analogWrite(RGB1_B_PIN, b);
-      analogWrite(RGB2_R_PIN, r); analogWrite(RGB2_G_PIN, g); analogWrite(RGB2_B_PIN, b);
-      hue++; delay(20);
-
-      // check hold then lid
-      if (digitalRead(BUTTON_PIN) == LOW) {
-        if (pressStart == 0) pressStart = millis();
-        if (millis() - pressStart >= 3000) {
-          // lid must be closed
-          if (digitalRead(LID_PIN) == HIGH) {
-            showMessage("Close Lid","to Lock");
-            for (int i=0; i<3; i++) {
-              digitalWrite(LED_RED_PIN, HIGH); delay(200);
-              digitalWrite(LED_RED_PIN, LOW);  delay(200);
-            }
-            pressStart = 0;
-            showMessage("Hold Button","to Lock");
-            continue;
-          }
-          // perform lock
-          showMessage("Locking","Please Wait");
-          delay(1000);
-          motorMG995.write(MOTOR_REST_ANGLE);
-          digitalWrite(LED_GREEN1_PIN, LOW);
-          digitalWrite(LED_GREEN2_PIN, LOW);
-          analogWrite(RGB1_R_PIN,0); analogWrite(RGB1_G_PIN,0); analogWrite(RGB1_B_PIN,0);
-          analogWrite(RGB2_R_PIN,0); analogWrite(RGB2_G_PIN,0); analogWrite(RGB2_B_PIN,0);
-          unlocked = unlockMsgShown = false;
-          delay(500);
-          showMessage("Please Scan","Card #1");
-          return;
-        }
-      } else {
-        pressStart = 0;
-      }
-    }
-  }
+  // — Grant access —
+  lcd.clear();
+  lcd.setCursor(0,0); lcd.print("Access Granted");
+  latchServo.write(MOTOR_ACTIVE_ANGLE);
+  swingServo.write(SWING_ACTIVE_ANGLE);
+  delay(MOTOR_HOLD_MS);
+  unlocked = true;
 }
 
-// — Helpers —  
+// — Helpers —
 void readCardBlocking(byte buf[4]) {
   while (!rfid.PICC_IsNewCardPresent()) delay(50);
   if (rfid.PICC_ReadCardSerial()) {
@@ -334,43 +273,10 @@ void waitForRemoval() {
 }
 
 bool isAuthorized(byte uid[4]) {
-  for (size_t i=0; i<sizeof(cards)/sizeof(cards[0]); i++)
+  for (size_t i = 0; i < sizeof(cards)/sizeof(cards[0]); i++) {
     if (!memcmp(cards[i], uid, 4)) return true;
+  }
   return false;
-}
-
-void showMessage(const char *l1, const char *l2) {
-  lcd.clear();
-  lcd.setCursor(0,0); lcd.print(l1);
-  lcd.setCursor(0,1); lcd.print(l2);
-  Serial.print(l1);
-  if (*l2) {
-    Serial.print(" | ");
-    Serial.print(l2);
-  }
-  Serial.println();
-}
-
-void indicateWrong() {
-  digitalWrite(LED_RED_PIN, HIGH);
-  digitalWrite(LED_GREEN1_PIN, LOW);
-  digitalWrite(LED_GREEN2_PIN, LOW);
-}
-
-void exportUID(byte uid[], byte len) {
-  Serial.print("UID DEC: ");
-  for (byte i=0; i<len; i++) {
-    Serial.print(uid[i], DEC);
-    if (i < len-1) Serial.print(',');
-  }
-  Serial.println();
-  Serial.print("UID HEX: ");
-  for (byte i=0; i<len; i++) {
-    if (uid[i] < 0x10) Serial.print('0');
-    Serial.print(uid[i], HEX);
-    if (i < len-1) Serial.print(':');
-  }
-  Serial.println();
 }
 ```
 
